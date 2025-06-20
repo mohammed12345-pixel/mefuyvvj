@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>عملة اليوم | أسعار العملات</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f9f9f9;
+      color: #222;
+      text-align: center;
+      padding: 20px;
+    }
+    header {
+      background-color: #007bff;
+      color: white;
+      padding: 25px 10px;
+      font-size: 1.8rem;
+      font-weight: bold;
+      border-radius: 12px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 25px;
+    }
+    .currency-box {
+      background: white;
+      max-width: 350px;
+      margin: 15px auto;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0, 123, 255, 0.1);
+    }
+    .currency-name {
+      font-weight: 700;
+      margin-bottom: 10px;
+      font-size: 1.3rem;
+    }
+    .currency-rate {
+      color: #007bff;
+      font-weight: 600;
+      font-size: 1.5rem;
+    }
+    .currency-change {
+      margin-top: 8px;
+      font-size: 1.1rem;
+    }
+    #chart-container {
+      max-width: 400px;
+      margin: 30px auto 10px;
+      background: white;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+    }
+    .ad-container {
+      margin: 40px auto;
+      max-width: 320px;
+      min-height: 100px;
+      background: #ddd;
+      border-radius: 12px;
+      line-height: 100px;
+      color: #666;
+      font-weight: bold;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>عملة اليوم | أسعار العملات</header>
+
+  <div class="currency-box">
+    <div class="currency-name">💵 الدولار الأمريكي (USD)</div>
+    <div class="currency-rate" id="rate-usd">...جاري التحميل</div>
+    <div class="currency-change" id="change-usd"></div>
+  </div>
+
+  <div class="currency-box">
+    <div class="currency-name">💶 اليورو (EUR)</div>
+    <div class="currency-rate" id="rate-eur">...جاري التحميل</div>
+    <div class="currency-change" id="change-eur"></div>
+  </div>
+
+  <div class="currency-box">
+    <div class="currency-name">🇸🇦 الريال السعودي (SAR)</div>
+    <div class="currency-rate" id="rate-sar">...جاري التحميل</div>
+    <div class="currency-change" id="change-sar"></div>
+  </div>
+
+  <div id="chart-container">
+    <canvas id="priceChart"></canvas>
+  </div>
+
+  <div class="ad-container">مكان إعلان Google AdSense</div>
+
+  <!-- مكتبة Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    // بيانات وهمية للرسم البياني (تحديثها مع البيانات الحقيقية لاحقًا)
+    const labels = ['6 أيام', '5 أيام', '4 أيام', '3 أيام', '2 أيام', 'أمس', 'اليوم'];
+
+    // بيانات أسعار الدولار (مبدئيا عشوائية)
+    let usdPrices = [48.1, 48.3, 48.2, 48.4, 48.6, 48.5, 48.7];
+
+    // إنشاء الرسم البياني
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    const priceChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'سعر الدولار مقابل الجنيه',
+          data: usdPrices,
+          borderColor: '#007bff',
+          backgroundColor: 'rgba(0,123,255,0.2)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: false
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              font: {size: 16}
+            }
+          }
+        }
+      }
+    });
+
+    // دالة لجلب أسعار العملات من API
+    async function fetchRates() {
+      try {
+        const response = await fetch('https://open.er-api.com/v6/latest/USD');
+        const data = await response.json();
+
+        const rates = data.rates;
+
+        // تحديث الأسعار
+        document.getElementById('rate-usd').textContent = rates.EGP.toFixed(3) + ' جنيه';
+        document.getElementById('rate-eur').textContent = (rates.EGP / rates.EUR).toFixed(3) + ' جنيه';
+        document.getElementById('rate-sar').textContent = (rates.EGP / rates.SAR).toFixed(3) + ' جنيه';
+
+        // تحديث التغير (مقارنة بالسعر السابق - نجرب اختلاف عشوائي الآن)
+        updateChange('usd', usdPrices[usdPrices.length - 1], rates.EGP);
+        updateChange('eur', usdPrices[usdPrices.length - 1] / rates.EUR, (rates.EGP / rates.EUR));
+        updateChange('sar', usdPrices[usdPrices.length - 1] / rates.SAR, (rates.EGP / rates.SAR));
+
+        // تحديث بيانات الرسم البياني لسعر الدولار (ندخل السعر الجديد)
+        usdPrices.shift(); // حذف أقدم قيمة
+        usdPrices.push(rates.EGP); // إضافة القيمة الجديدة
+        priceChart.data.datasets[0].data = usdPrices;
+        priceChart.update();
+
+      } catch (error) {
+        console.error('خطأ في جلب الأسعار:', error);
+        document.getElementById('rate-usd').textContent = 'خطأ في التحميل';
+        document.getElementById('rate-eur').textContent = 'خطأ في التحميل';
+        document.getElementById('rate-sar').textContent = 'خطأ في التحميل';
+      }
+    }
+
+    // دالة لتحديث تغير السعر (زيادة/نقصان)
+    function updateChange(id, oldPrice, newPrice) {
+      const changeElem = document.getElementById(`change-${id}`);
+      const diff = newPrice - oldPrice;
+      const diffFixed = diff.toFixed(3);
+      if (diff > 0) {
+        changeElem.textContent = `🔺 زيادة ${diffFixed} جنيه`;
+        changeElem.style.color = 'green';
+      } else if (diff < 0) {
+        changeElem.textContent = `🔻 نقصان ${Math.abs(diffFixed)} جنيه`;
+        changeElem.style.color = 'red';
+      } else {
+        changeElem.textContent = `➖ بدون تغير`;
+        changeElem.style.color = '#555';
+      }
+    }
+
+    // جلب الأسعار أول مرة
+    fetchRates();
+
+    // تحديث الأسعار كل 5 دقائق (300000 مللي ثانية)
+    setInterval(fetchRates, 300000);
+  </script>
+
+</body>
+</html>
